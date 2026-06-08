@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modern Calculator</title>
+
+<style>
+:root{
+    --bg:#0f172a;
+    --calc:#1e293b;
+    --btn:#334155;
+    --btn-hover:#475569;
+    --text:#f8fafc;
+    --operator:#fbbf24;
+    --success:#10b981;
+    --danger:#ef4444;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Segoe UI, sans-serif;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:var(--bg);
+    padding:20px;
+}
+
+.calculator{
+    width:380px;
+    background:var(--calc);
+    border-radius:24px;
+    padding:20px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+}
+
+.title{
+    text-align:center;
+    color:white;
+    margin-bottom:15px;
+    font-size:1.4rem;
+}
+
+.display{
+    background:rgba(0,0,0,.2);
+    border-radius:16px;
+    padding:20px;
+    min-height:110px;
+    text-align:right;
+    margin-bottom:20px;
+    overflow:hidden;
+}
+
+#preview{
+    color:#94a3b8;
+    min-height:25px;
+    font-size:1rem;
+}
+
+#screen{
+    color:white;
+    font-size:2.2rem;
+    font-weight:600;
+    word-wrap:break-word;
+    word-break:break-all;
+}
+
+.buttons{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+}
+
+button{
+    border:none;
+    padding:18px;
+    border-radius:12px;
+    cursor:pointer;
+    background:var(--btn);
+    color:white;
+    font-size:1.1rem;
+    font-weight:600;
+    transition:.2s;
+}
+
+button:hover{
+    background:var(--btn-hover);
+    transform:translateY(-2px);
+}
+
+button:active{
+    transform:translateY(0);
+}
+
+.operator{
+    color:var(--operator);
+}
+
+.clear{
+    color:var(--danger);
+}
+
+.equals{
+    background:var(--success);
+    grid-column:span 2;
+}
+
+.equals:hover{
+    background:#059669;
+}
+
+@media(max-width:420px){
+    .calculator{
+        width:100%;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="calculator">
+
+    <h2 class="title">Calculator</h2>
+
+    <div class="display">
+        <div id="preview"></div>
+        <div id="screen">0</div>
+    </div>
+
+    <div class="buttons">
+
+        <button class="clear" onclick="clearAll()">AC</button>
+        <button class="clear" onclick="deleteLast()">DEL</button>
+        <button class="operator" onclick="append('(')">(</button>
+        <button class="operator" onclick="append(')')">)</button>
+
+        <button onclick="append('7')">7</button>
+        <button onclick="append('8')">8</button>
+        <button onclick="append('9')">9</button>
+        <button class="operator" onclick="append('/')">÷</button>
+
+        <button onclick="append('4')">4</button>
+        <button onclick="append('5')">5</button>
+        <button onclick="append('6')">6</button>
+        <button class="operator" onclick="append('*')">×</button>
+
+        <button onclick="append('1')">1</button>
+        <button onclick="append('2')">2</button>
+        <button onclick="append('3')">3</button>
+        <button class="operator" onclick="append('-')">−</button>
+
+        <button onclick="append('0')">0</button>
+        <button onclick="append('.')">.</button>
+        <button class="operator" onclick="append('%')">%</button>
+        <button class="operator" onclick="append('+')">+</button>
+
+        <button class="equals" onclick="calculate()">=</button>
+
+    </div>
+
+</div>
+
+<script>
+
+const screen = document.getElementById("screen");
+const preview = document.getElementById("preview");
+
+let expression = "";
+let resetNext = false;
+
+function updateScreen() {
+
+    if(expression === ""){
+        screen.innerText = "0";
+        return;
+    }
+
+    screen.innerText = expression
+        .replace(/\*/g," × ")
+        .replace(/\//g," ÷ ")
+        .replace(/\-/g," − ");
+}
+
+function isOperator(char){
+    return ["+","-","*","/","%"].includes(char);
+}
+
+function append(value){
+
+    if(resetNext){
+        expression = "";
+        resetNext = false;
+    }
+
+    const lastChar = expression.slice(-1);
+
+    if(expression === "" && ["+","*","/","%"].includes(value)){
+        return;
+    }
+
+    if(isOperator(value) && isOperator(lastChar)){
+        expression = expression.slice(0,-1);
+    }
+
+    if(value === "."){
+
+        let parts = expression.split(/[+\-*/%()]/);
+        let currentNumber = parts[parts.length-1];
+
+        if(currentNumber.includes(".")){
+            return;
+        }
+    }
+
+    expression += value;
+
+    updateScreen();
+    livePreview();
+}
+
+function clearAll(){
+    expression = "";
+    screen.innerText = "0";
+    preview.innerText = "";
+}
+
+function deleteLast(){
+
+    expression = expression.slice(0,-1);
+
+    updateScreen();
+    livePreview();
+}
+
+function calculate(){
+
+    if(expression === "") return;
+
+    try{
+
+        let result = Function(
+            '"use strict"; return (' + expression + ')'
+        )();
+
+        if(!isFinite(result)){
+            throw new Error();
+        }
+
+        result = Math.round(result * 100000000) / 100000000;
+
+        preview.innerText = expression + " =";
+        screen.innerText = result;
+
+        expression = result.toString();
+        resetNext = true;
+
+    }catch{
+        screen.innerText = "Error";
+        preview.innerText = "";
+        expression = "";
+    }
+}
+
+function livePreview(){
+
+    try{
+
+        if(
+            expression.length > 1 &&
+            !isOperator(expression.slice(-1))
+        ){
+
+            let result = Function(
+                '"use strict"; return (' + expression + ')'
+            )();
+
+            if(isFinite(result)){
+                preview.innerText =
+                    Math.round(result * 100000) / 100000;
+            }
+
+        }else{
+            preview.innerText = "";
+        }
+
+    }catch{
+        preview.innerText = "";
+    }
+}
+
+/* Keyboard Support */
+
+document.addEventListener("keydown", function(e){
+
+    const key = e.key;
+
+    if(!isNaN(key)){
+        append(key);
+        return;
+    }
+
+    switch(key){
+
+        case ".":
+            append(".");
+            break;
+
+        case "+":
+            append("+");
+            break;
+
+        case "-":
+            append("-");
+            break;
+
+        case "*":
+            append("*");
+            break;
+
+        case "/":
+            append("/");
+            break;
+
+        case "%":
+            append("%");
+            break;
+
+        case "(":
+            append("(");
+            break;
+
+        case ")":
+            append(")");
+            break;
+
+        case "Enter":
+        case "=":
+            e.preventDefault();
+            calculate();
+            break;
+
+        case "Backspace":
+            deleteLast();
+            break;
+
+        case "Escape":
+            clearAll();
+            break;
+    }
+});
+
+</script>
+
+</body>
+</html>
